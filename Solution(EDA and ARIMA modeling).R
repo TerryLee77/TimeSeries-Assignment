@@ -8,6 +8,12 @@ library(car)
 library(vip)
 library(stats)
 library(ggplot2)
+library(ggpubr)
+library(TSstudio)
+library(corrplot)
+library(car)
+library(scales)
+library(cowplot)
 
 ## definitions of functions
 
@@ -33,6 +39,29 @@ names(data_new)[12] <- "EWS"
 names(data_new)[13] <- "NSS"
 data_res <- data_new[-c(dim(data_new)[1]-10:dim(data_new)),]
 data_new <- data_new[c(dim(data_new)[1]-10:dim(data_new)),]
+
+data1 <- data
+data1 <- na.omit(data1)
+for(i in 1:dim(data1)[1]){
+  data1[i,c("EWS","NSS")] <- trans_wind(data1[i,"WD"]) * data1[i,"WS"] / sqrt(2)
+}
+for (i in 1:dim(data1[1])) {
+  if(data1[i,"month"] == 3 | data1[i,"month"] == 4 | data1[i,"month"] == 5) data1[i,"season"] = 1
+  else if(data1[i,"month"] == 6 | data1[i,"month"] == 7 | data1[i,"month"] == 8) data1[i,"season"] = 2
+  else if(data1[i,"month"] == 9 | data1[i,"month"] == 10 | data1[i,"month"] == 11) data1[i,"season"] = 3
+  else data1[i,"season"] = 4
+}
+data1$season <- as.factor(data1$season)
+data1$month <- as.factor(data1$month)
+data1$hour <- as.factor(data1$hour)
+
+#### Correlation
+data_temp <- data1[c("PM2.5","PM10","SO2","NO2","O3","CO","TEMP","PRES","RAIN","HUMI","DEWP","WS","EWS","NSS")]
+res<-cor(data_temp)
+corrplot(res, method = "circle",
+         shade.col = NA, tl.col = "black",
+         tl.srt = 45, tl.cex = 1.5, addCoef.col = "black",
+         number.cex = 1.5, cl.pos = NULL)
 
 #### Standardization
 mean_varia <- rep(0,dim(data_new)[2])
@@ -74,11 +103,23 @@ par(mfrow=c(1,1))
 
 
 ## relations between NO2 and predictors
-plot.ts(data_new[,"DEWP"])
-plot.ts(data_new[,"NO2"])
-plot.ts(data_new[,"TEMP"]) #### Waiting for inserting
+bp1_NO2 <- ggplot(data1, aes(x = NO2)) + geom_histogram()
+bp2_NO2 <- ggplot(data1, aes(x = season, y = NO2)) + geom_boxplot(aes(colour = season)) + stat_summary(fun = "mean", geom = "point") + theme(axis.text.x = element_blank(), legend.key.size = unit(10,"pt"), legend.position = "bottom") + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+bp3_NO2 <- ggplot(data1, aes(x = month, y = NO2)) + geom_boxplot(aes(colour = month)) + stat_summary(fun = "mean", geom = "point") + theme(legend.position = "None")
+bp4_NO2 <- ggplot(data1, aes(x = hour, y = NO2)) + geom_boxplot(aes(colour = hour)) + stat_summary(fun = "mean", geom = "point") + theme(legend.position = "None")
+bp_NO2 <- ggarrange(bp1_NO2, bp2_NO2, bp3_NO2, bp4_NO2, nrow = 2, ncol = 2)
+bp_NO2
 
-
+p1_NO2 <- ggplot(data1, aes(x = TEMP, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p2_NO2 <- ggplot(data1, aes(x = PRES, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p3_NO2 <- ggplot(data1, aes(x = RAIN, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p4_NO2 <- ggplot(data1, aes(x = HUMI, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p5_NO2 <- ggplot(data1, aes(x = DEWP, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p6_NO2 <- ggplot(data1, aes(x = WS, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p7_NO2 <- ggplot(data1, aes(x = EWS, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p8_NO2 <- ggplot(data1, aes(x = NSS, y = NO2)) + geom_point(aes(colour = season)) +  geom_smooth(method = lm) + scale_colour_discrete(breaks = c("1", "2", "3", "4"), labels = c("春", "夏", "秋", "冬"))
+p_NO2 <- ggarrange(p1_NO2, p2_NO2, p3_NO2, p4_NO2, p5_NO2, p6_NO2, p7_NO2, p8_NO2, nrow = 4, ncol = 2, common.legend = TRUE)
+p_NO2
 
 ## Test for Stationarity
 adf.test(data_new[,"NO2"])
